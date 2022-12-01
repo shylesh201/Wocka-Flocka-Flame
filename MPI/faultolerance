@@ -1,0 +1,83 @@
+#include<stdio.h>
+#include<mpi.h>
+#include<stdlib.h>
+int main(int argc, char **argv) {
+int size, rank, faulty = 0, r = 2;
+MPI_Init(&argc, &argv);
+MPI_Comm_size(MPI_COMM_WORLD, &size);
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+MPI_Status st;
+if(rank == 2 || rank == 5) {
+faulty = 1;
+}
+if(faulty == 1) {
+printf("I am rank %d. I am faulty\n", rank);
+}
+int recv[size];
+if(faulty != 1) {
+for(int i = 0; i < size; i++) {
+if(i != rank) {
+MPI_Send(&rank, 1, MPI_INT, i, 101, MPI_COMM_WORLD);
+}
+}
+for(int i = 0; i < size; i++) {
+if(i == rank) {
+recv[i] = rank;
+}
+else {
+MPI_Recv(&recv[i], 1, MPI_INT, i, 101, MPI_COMM_WORLD, &st);
+}
+}
+}
+else {
+for(int i = 0; i < size; i++) {
+PDS Lab Exercise 12
+if(i != rank) {
+r = (rand() + r * r) % 100;
+MPI_Send(&r, 1, MPI_INT, i, 101, MPI_COMM_WORLD);
+}
+}
+for(int i = 0; i < size; i++) {
+if(i == rank) {
+recv[i] = rank;
+}
+else {
+MPI_Recv(&recv[i], 1, MPI_INT, i, 101, MPI_COMM_WORLD, &st);
+}
+}
+for(int i = 0; i < size; i++) {
+recv[i] = (rand() + r * r) % 100;
+}
+}
+int majority, count, i, j, k;
+for(int i = 0; i < size; i++) {
+if(i != rank) {
+MPI_Send(recv, size, MPI_INT, i, 201, MPI_COMM_WORLD);
+}
+}
+int vect[size][size];
+for(int i = 0; i < size - 1; i++) {
+MPI_Recv(vect[i], size, MPI_INT, MPI_ANY_SOURCE, 201, MPI_COMM_WORLD, &st);
+}
+for(int i = 0; i < size; i++) {
+for(j = 0; j < size - 1; j++) {
+count = 0;
+majority = vect[j][i];
+for(k = 0; k < size - 1; k++) {
+if(vect[k][i] == majority) {
+count++;
+}
+else {
+count--;
+}
+}
+if(count > 0) {
+break;
+}
+}
+if(j == size - 1) {
+printf("%d says %d is faulty\n", rank, i);
+}
+}
+MPI_Finalize();
+}
